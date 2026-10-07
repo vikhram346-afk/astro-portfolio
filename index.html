@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solar System Physics & Orbital Dynamics Simulator</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js"></script>
     <style>
         :root {
             --bg-color: #0d1117;
@@ -17,7 +17,6 @@
             --text-muted: #8b949e;
             --accent-blue: #58a6ff;
             --accent-green: #3fb950;
-            --accent-gold: #d29922;
         }
 
         body {
@@ -61,7 +60,6 @@
             margin-bottom: 20px;
         }
 
-        /* Canvas & Controls */
         .canvas-container {
             position: relative;
             width: 100%;
@@ -74,6 +72,9 @@
         canvas#orbitCanvas {
             display: block;
             width: 100%;
+            max-width: 650px;
+            height: auto;
+            margin: 0 auto;
             cursor: pointer;
         }
 
@@ -117,7 +118,6 @@
             flex-grow: 1;
         }
 
-        /* Planet Info Panel */
         .planet-header {
             display: flex;
             align-items: center;
@@ -177,4 +177,144 @@
         .planet-selector {
             display: flex;
             gap: 6px;
-            flex-wrap: wrap
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .planet-btn {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Solar System Physics & Orbital Mechanics Simulator</h1>
+    <div class="header-subtitle">An interactive computational model analyzing Keplerian orbits, atmospheric escape limits, and gravitational dynamics across the Solar System.</div>
+
+    <div class="layout-grid">
+        <div>
+            <div class="card">
+                <h2>Interactive Orbital Simulator</h2>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Click on any planet in orbit or use the selector buttons to inspect its orbital mechanics and atmospheric retention limits.</p>
+                
+                <div class="canvas-container">
+                    <canvas id="orbitCanvas" width="650" height="650"></canvas>
+                </div>
+
+                <div class="controls-bar">
+                    <button id="playPauseBtn" class="active">Pause</button>
+                    <div class="slider-group">
+                        <label for="speedSlider" style="font-size: 0.85rem; color: var(--text-muted);">Sim Speed:</label>
+                        <input type="range" id="speedSlider" min="0.1" max="5" step="0.1" value="1">
+                    </div>
+                    <button id="toggleTrailsBtn">Toggle Orbits</button>
+                </div>
+            </div>
+
+            <div class="card" id="mathCard">
+                <h2>Mathematical & Physical Foundations</h2>
+                <div class="equation">
+                    $$\text{Kepler's Third Law: } T^2 = \frac{4\pi^2}{G M_*} a^3 \implies T \propto a^{3/2}$$
+                </div>
+                <div class="equation">
+                    $$\text{Orbital Speed: } v_{orb} \approx \sqrt{\frac{G M_*}{a}}, \quad \text{Escape Velocity: } v_{esc} = \sqrt{\frac{2 G M_p}{R_p}}$$
+                </div>
+                <div class="equation">
+                    $$\text{Maxwell-Boltzmann Mean Thermal Velocity: } v_{th} = \sqrt{\frac{8 k_B T_{eq}}{\pi m}}$$
+                </div>
+                <div class="physics-box">
+                    <strong>Atmospheric Retention Rule of Thumb:</strong> A planet retains a gas over geological timescales ($10^9\text{ yrs}$) if $v_{esc} > 6 \times v_{th}$. If $v_{esc} \le 6 v_{th}$, thermal escape (Jeans escape) rapidly strips the atmosphere into space.
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <div class="planet-selector" id="planetSelector"></div>
+
+                <div class="planet-header">
+                    <span id="planetBadge" class="planet-badge"></span>
+                    <h2 id="planetName" style="border: none; padding: 0; margin: 0;">Mercury</h2>
+                </div>
+
+                <div class="data-grid">
+                    <div class="data-item">
+                        <span class="data-label">Semi-Major Axis ($a$)</span>
+                        <span id="dataAxis" class="data-value">0.387 AU</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Orbital Period ($T$)</span>
+                        <span id="dataPeriod" class="data-value">0.24 yrs</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Mean Orbital Speed</span>
+                        <span id="dataSpeed" class="data-value">47.4 km/s</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Surface Gravity ($g$)</span>
+                        <span id="dataGravity" class="data-value">0.38 g</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Escape Velocity ($v_{esc}$)</span>
+                        <span id="dataVesc" class="data-value">4.25 km/s</span>
+                    </div>
+                    <div class="data-item">
+                        <span class="data-label">Equilibrium Temp ($T_{eq}$)</span>
+                        <span id="dataTemp" class="data-value">440 K</span>
+                    </div>
+                </div>
+
+                <h3>Astrophysical Overview</h3>
+                <p id="planetDesc" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main);"></p>
+
+                <div class="physics-box">
+                    <strong>Atmospheric Retention Mechanics:</strong>
+                    <p id="planetAtmosphere" style="font-size: 0.9rem; margin-top: 5px; margin-bottom: 0;"></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Orbital Speed vs. Distance ($a$)</h2>
+                <canvas id="keplerChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const planets = [
+                {
+                    name: "Mercury", color: "#a6a6a6", radiusAU: 0.387, periodYrs: 0.241, gravityG: 0.38, vEscKms: 4.25, vOrbKms: 47.36, tempK: 440, visualRadius: 4,
+                    description: "Mercury is the smallest planet and closest to the Sun. Due to its high orbital eccentricity (e ≈ 0.206), its velocity varies significantly between perihelion and aphelion, serving as a classical testbed for General Relativity's perihelion precession.",
+                    atmosphere: "Mercury's low escape velocity (4.25 km/s) combined with high surface temperatures means thermal velocities of common gases easily exceed v_esc / 6. Consequently, it cannot retain a substantial atmosphere."
+                },
+                {
+                    name: "Venus", color: "#e3bb76", radiusAU: 0.723, periodYrs: 0.615, gravityG: 0.90, vEscKms: 10.36, vOrbKms: 35.02, tempK: 737, visualRadius: 7,
+                    description: "Venus is Earth's twin in size and mass, but possesses a runaway greenhouse effect. Its near-circular orbit (e ≈ 0.007) ensures nearly constant solar irradiance across its year.",
+                    atmosphere: "With v_esc = 10.36 km/s, Venus easily retains heavy carbon dioxide (CO2). However, lacking an intrinsic magnetic field, solar wind dissociation continuously strips lighter hydrogen isotopes."
+                },
+                {
+                    name: "Earth", color: "#4287f5", radiusAU: 1.000, periodYrs: 1.000, gravityG: 1.00, vEscKms: 11.19, vOrbKms: 29.78, tempK: 288, visualRadius: 7.5,
+                    description: "Earth occupies the circumstellar habitable zone where liquid water remains stable. Its orbital dynamics serve as the astronomical standard reference baseline (a = 1.0 AU, T = 1.0 year).",
+                    atmosphere: "Earth's escape velocity of 11.19 km/s comfortably retains N2 and O2 molecules (v_th ≈ 0.5 km/s << v_esc / 6). Free H2 and He, however, slowly escape over geological time."
+                },
+                {
+                    name: "Mars", color: "#e0533c", radiusAU: 1.524, periodYrs: 1.881, gravityG: 0.38, vEscKms: 5.03, vOrbKms: 24.07, tempK: 210, visualRadius: 5.5,
+                    description: "Mars is a cold terrestrial planet with an eccentric orbit (e = 0.093). The variation in solar flux leads to dramatic global dust storms around perihelion.",
+                    atmosphere: "With an escape velocity of just 5.03 km/s and the loss of its early global magnetic field, solar wind sputtering and Jeans escape stripped over 99% of its original atmosphere."
+                },
+                {
+                    name: "Jupiter", color: "#d49b59", radiusAU: 5.204, periodYrs: 11.862, gravityG: 2.53, vEscKms: 59.50, vOrbKms: 13.07, tempK: 124, visualRadius: 14,
+                    description: "Jupiter is the most massive planet in the Solar System (M_J ≈ 318 M_Earth). It acts as a gravitational anchor, strongly influencing asteroid belt dynamics via orbital resonances (Kirkwood gaps).",
+                    atmosphere: "Jupiter's enormous mass creates a massive escape velocity of 59.5 km/s. It retains primordial Hydrogen (H2) and Helium (He) captured directly from the protoplanetary nebula without thermal escape."
+                },
+                {
+                    name: "Saturn", color: "#e8c87d", radiusAU: 9.582, periodYrs: 29.457, gravityG: 1.06, vEscKms: 35.50, vOrbKms: 9.68, tempK: 95, visualRadius: 12,
+                    description: "Saturn is a gas giant famous for its ring system, which exists inside its Roche limit—the distance within which gravitational tidal forces tear apart satellite bodies.",
+                    atmosphere: "With v_esc = 35.5 km/s and an equilibrium temperature below 100 K, thermal velocities for all atmospheric gas species remain far below the escape threshold."
+                },
+                {
+                    name: "Uranus", color: "#72d1d9", radiusAU: 19.201, periodYrs: 84.011, gravityG: 0.89, vEscKms: 21.30, vOrbKms: 6.80, tempK: 59, visualRadius: 9,
+                    description: "Uranus is an Ice Giant with an extreme axial tilt (≈ 98°). It orbits at nearly 20 AU, requiring over 84 Earth years to complete a single revolution around the Sun.",
+                    atmosphere: "Its cold ambient temperatures and large gravitational potential prevent gas loss, retaining a hydrogen-helium atmosphere with
