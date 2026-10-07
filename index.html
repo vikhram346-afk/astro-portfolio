@@ -3,121 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exoplanet Transit Photometry & Habitability Model</title>
+    <title>Solar System Physics & Orbital Dynamics Simulator</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #0d1117; color: #c9d1d9; }
-        h1, h2 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        label { font-weight: bold; display: block; margin-top: 10px; color: #8b949e; }
-        input[type=range] { width: 100%; margin: 8px 0; }
-        .metric { font-size: 1.2rem; font-weight: bold; color: #3fb950; }
-        .equation { background: #0d1117; padding: 10px; border-radius: 6px; margin: 10px 0; }
-    </style>
-</head>
-<body>
-
-    <h1>Exoplanet Transit Photometry & Habitability Explorer</h1>
-    <p>A computational model evaluating exoplanetary detection limits via transit photometry and radiative equilibrium.</p>
-
-    <div class="card">
-        <h2>Mathematical Framework</h2>
-        <div class="equation">
-            $$\text{Transit Depth } (\delta) = \left(\frac{R_p}{R_*}\right)^2$$
-        </div>
-        <div class="equation">
-            $$\text{Orbital Period } (T) = \sqrt{a^3} \quad \text{(Kepler's 3rd Law, where } a \text{ is in AU, } T \text{ in years)}$$
-        </div>
-        <div class="equation">
-            $$\text{Equilibrium Temp } (T_{eq}) = T_* \sqrt{\frac{R_*}{2a}}$$
-        </div>
-    </div>
-
-    <div class="card grid">
-        <div>
-            <h2>Model Parameters</h2>
-            <label>Planet Radius ($R_\oplus$): <span id="rVal" class="metric">1.0</span></label>
-            <input type="range" id="rInput" min="0.5" max="15" step="0.1" value="1.0">
-
-            <label>Semi-major Axis (AU): <span id="aVal" class="metric">1.0</span></label>
-            <input type="range" id="aInput" min="0.05" max="3.0" step="0.05" value="1.0">
-
-            <label>Stellar Effective Temp (K): <span id="tVal" class="metric">5778</span></label>
-            <input type="range" id="tInput" min="3000" max="8000" step="100" value="5778">
-        </div>
-
-        <div>
-            <h2>Derived Physical Outputs</h2>
-            <p>Flux Dip ($\delta$): <span id="outDepth" class="metric">0.010%</span></p>
-            <p>Orbital Period: <span id="outPeriod" class="metric">365.25 days</span></p>
-            <p>Equilibrium Temp ($T_{eq}$): <span id="outTeq" class="metric">255 K (-18°C)</span></p>
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>Simulated Transit Light Curve</h2>
-        <canvas id="lightCurveChart"></canvas>
-    </div>
-
-    <script>
-        const ctx = document.getElementById('lightCurveChart').getContext('2d');
-        let chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'Relative Stellar Flux', data: [], borderColor: '#58a6ff', borderWidth: 2, fill: false, pointRadius: 0 }] },
-            options: { scales: { x: { title: { display: true, text: 'Time (Hours relative to midpoint)', color: '#8b949e' }, ticks: { color: '#8b949e' } }, y: { title: { display: true, text: 'Normalized Brightness', color: '#8b949e' }, ticks: { color: '#8b949e' }, min: 0.97, max: 1.005 } } }
-        });
-
-        function updateModel() {
-            const Rp = parseFloat(document.getElementById('rInput').value);
-            const a = parseFloat(document.getElementById('aInput').value);
-            const Tstar = parseFloat(document.getElementById('tInput').value);
-
-            document.getElementById('rVal').innerText = Rp;
-            document.getElementById('aVal').innerText = a;
-            document.getElementById('tVal').innerText = Tstar;
-
-            const RstarInEarth = 109.0;
-            const depthFrac = Math.pow(Rp / RstarInEarth, 2);
-            const depthPct = (depthFrac * 100).toFixed(4);
-
-            const periodYears = Math.sqrt(Math.pow(a, 3));
-            const periodDays = (periodYears * 365.25).toFixed(1);
-
-            const RstarAU = 0.00465;
-            const Teq = Math.round(Tstar * Math.sqrt(RstarAU / (2 * a)));
-
-            document.getElementById('outDepth').innerText = depthPct + '%';
-            document.getElementById('outPeriod').innerText = periodDays + ' days (' + periodYears.toFixed(2) + ' yrs)';
-            document.getElementById('outTeq').innerText = Teq + ' K (' + (Teq - 273) + '°C)';
-
-            let times = [];
-            let flux = [];
-            for (let t = -12; t <= 12; t += 0.2) {
-                times.push(t.toFixed(1));
-                if (Math.abs(t) < 2.5) {
-                    flux.push(1.0 - depthFrac);
-                } else if (Math.abs(t) < 3.5) {
-                    let transition = (Math.abs(t) - 2.5);
-                    flux.push(1.0 - depthFrac * (1.0 - transition));
-                } else {
-                    flux.push(1.0);
-                }
-            }
-
-            chart.data.labels = times;
-            chart.data.datasets[0].data = flux;
-            chart.options.scales.y.min = Math.min(0.97, 1.0 - depthFrac * 1.5);
-            chart.update();
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-gold: #d29922;
         }
 
-        document.getElementById('rInput').addEventListener('input', updateModel);
-        document.getElementById('aInput').addEventListener('input', updateModel);
-        document.getElementById('tInput').addEventListener('input', updateModel);
-        updateModel();
-    </script>
-</body>
-</html>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        h1, h2, h3 {
+            color: var(--accent-blue);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+
+        .header-subtitle {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 900px) {
+            .layout-grid {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Canvas & Controls */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        canvas#orbitCanvas {
+            display: block;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #21262d;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #30363d;
+            border-color: var(--accent-blue);
+        }
+
+        button.active {
+            background: #238636;
+            border-color: #2ea043;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        input[type=range] {
+            flex-grow: 1;
+        }
+
+        /* Planet Info Panel */
+        .planet-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .planet-badge {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .data-item {
+            background: var(--bg-color);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .data-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        .physics-box {
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-blue);
+            margin-top: 15px;
+        }
+
+        .equation {
+            background: var(--bg-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        .planet-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap
