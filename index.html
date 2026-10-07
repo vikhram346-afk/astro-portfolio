@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exoplanet Transit Photometry & Habitability Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #0d1117; color: #c9d1d9; }
+        h1, h2 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { font-weight: bold; display: block; margin-top: 10px; color: #8b949e; }
+        input[type=range] { width: 100%; margin: 8px 0; }
+        .metric { font-size: 1.2rem; font-weight: bold; color: #3fb950; }
+        .equation { background: #0d1117; padding: 10px; border-radius: 6px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Exoplanet Transit Photometry & Habitability Explorer</h1>
+    <p>A computational model evaluating exoplanetary detection limits via transit photometry and radiative equilibrium.</p>
+
+    <div class="card">
+        <h2>Mathematical Framework</h2>
+        <div class="equation">
+            $$\text{Transit Depth } (\delta) = \left(\frac{R_p}{R_*}\right)^2$$
+        </div>
+        <div class="equation">
+            $$\text{Orbital Period } (T) = \sqrt{a^3} \quad \text{(Kepler's 3rd Law, where } a \text{ is in AU, } T \text{ in years)}$$
+        </div>
+        <div class="equation">
+            $$\text{Equilibrium Temp } (T_{eq}) = T_* \sqrt{\frac{R_*}{2a}}$$
+        </div>
+    </div>
+
+    <div class="card grid">
+        <div>
+            <h2>Model Parameters</h2>
+            <label>Planet Radius ($R_\oplus$): <span id="rVal" class="metric">1.0</span></label>
+            <input type="range" id="rInput" min="0.5" max="15" step="0.1" value="1.0">
+
+            <label>Semi-major Axis (AU): <span id="aVal" class="metric">1.0</span></label>
+            <input type="range" id="aInput" min="0.05" max="3.0" step="0.05" value="1.0">
+
+            <label>Stellar Effective Temp (K): <span id="tVal" class="metric">5778</span></label>
+            <input type="range" id="tInput" min="3000" max="8000" step="100" value="5778">
+        </div>
+
+        <div>
+            <h2>Derived Physical Outputs</h2>
+            <p>Flux Dip ($\delta$): <span id="outDepth" class="metric">0.010%</span></p>
+            <p>Orbital Period: <span id="outPeriod" class="metric">365.25 days</span></p>
+            <p>Equilibrium Temp ($T_{eq}$): <span id="outTeq" class="metric">255 K (-18°C)</span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Simulated Transit Light Curve</h2>
+        <canvas id="lightCurveChart"></canvas>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('lightCurveChart').getContext('2d');
+        let chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Relative Stellar Flux', data: [], borderColor: '#58a6ff', borderWidth: 2, fill: false, pointRadius: 0 }] },
+            options: { scales: { x: { title: { display: true, text: 'Time (Hours relative to midpoint)', color: '#8b949e' }, ticks: { color: '#8b949e' } }, y: { title: { display: true, text: 'Normalized Brightness', color: '#8b949e' }, ticks: { color: '#8b949e' }, min: 0.97, max: 1.005 } } }
+        });
+
+        function updateModel() {
+            const Rp = parseFloat(document.getElementById('rInput').value);
+            const a = parseFloat(document.getElementById('aInput').value);
+            const Tstar = parseFloat(document.getElementById('tInput').value);
+
+            document.getElementById('rVal').innerText = Rp;
+            document.getElementById('aVal').innerText = a;
+            document.getElementById('tVal').innerText = Tstar;
+
+            const RstarInEarth = 109.0;
+            const depthFrac = Math.pow(Rp / RstarInEarth, 2);
+            const depthPct = (depthFrac * 100).toFixed(4);
+
+            const periodYears = Math.sqrt(Math.pow(a, 3));
+            const periodDays = (periodYears * 365.25).toFixed(1);
+
+            const RstarAU = 0.00465;
+            const Teq = Math.round(Tstar * Math.sqrt(RstarAU / (2 * a)));
+
+            document.getElementById('outDepth').innerText = depthPct + '%';
+            document.getElementById('outPeriod').innerText = periodDays + ' days (' + periodYears.toFixed(2) + ' yrs)';
+            document.getElementById('outTeq').innerText = Teq + ' K (' + (Teq - 273) + '°C)';
+
+            let times = [];
+            let flux = [];
+            for (let t = -12; t <= 12; t += 0.2) {
+                times.push(t.toFixed(1));
+                if (Math.abs(t) < 2.5) {
+                    flux.push(1.0 - depthFrac);
+                } else if (Math.abs(t) < 3.5) {
+                    let transition = (Math.abs(t) - 2.5);
+                    flux.push(1.0 - depthFrac * (1.0 - transition));
+                } else {
+                    flux.push(1.0);
+                }
+            }
+
+            chart.data.labels = times;
+            chart.data.datasets[0].data = flux;
+            chart.options.scales.y.min = Math.min(0.97, 1.0 - depthFrac * 1.5);
+            chart.update();
+        }
+
+        document.getElementById('rInput').addEventListener('input', updateModel);
+        document.getElementById('aInput').addEventListener('input', updateModel);
+        document.getElementById('tInput').addEventListener('input', updateModel);
+        updateModel();
+    </script>
+</body>
+</html>
